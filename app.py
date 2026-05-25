@@ -378,7 +378,7 @@ def scan(storage_id):
                     '出力例:\n牛乳\n卵\n納豆\nキムチ\n醤油\nマヨネーズ'
                 )
                 msg = client.messages.create(
-                    model='claude-sonnet-4-5-20251001',
+                    model='claude-3-5-sonnet-20241022',
                     max_tokens=1024,
                     messages=[{
                         'role': 'user',
