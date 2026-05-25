@@ -363,18 +363,28 @@ def scan(storage_id):
             try:
                 api_key = os.environ.get('ANTHROPIC_API_KEY', '')
                 client = anthropic.Anthropic(api_key=api_key if api_key else None)
+                storage_type = '冷蔵庫' if s['type'] == 'fridge' else '食材庫・常温保管庫'
+                prompt = (
+                    f'これは児童養護施設の{storage_type}の写真です。\n'
+                    '画像に写っているすべての食品・飲料・食材・調味料を日本語でリストアップしてください。\n\n'
+                    '【ルール】\n'
+                    '- 1行に1品目のみ（品名だけ、数量・説明・記号は不要）\n'
+                    '- ラベルや文字が見えるものは正確に読み取る\n'
+                    '- 日本語の一般的な品名で書く（例：牛乳、卵、納豆、醤油、ケチャップ）\n'
+                    '- 容器・袋・パックに入っていても中身の食品名を書く\n'
+                    '- 見切れているものや部分的に見えるものも含める\n'
+                    '- 食品・飲料・食材・調味料以外は書かない\n'
+                    '- 前置きや説明文は一切書かず、品名リストだけ出力する\n\n'
+                    '出力例:\n牛乳\n卵\n納豆\nキムチ\n醤油\nマヨネーズ'
+                )
                 msg = client.messages.create(
-                    model='claude-haiku-4-5-20251001',
+                    model='claude-sonnet-4-5-20251001',
                     max_tokens=1024,
                     messages=[{
                         'role': 'user',
                         'content': [
                             {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type, 'data': img_b64}},
-                            {'type': 'text', 'text': (
-                                'この画像に写っている食品・飲料・食材をすべてリストアップしてください。'
-                                '1行に1品目、品名のみ（数量・説明不要）で答えてください。'
-                                '例:\n牛乳\n卵\n納豆\nジュース'
-                            )}
+                            {'type': 'text', 'text': prompt}
                         ]
                     }]
                 )
