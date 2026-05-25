@@ -104,7 +104,8 @@ def init_db():
                 quantity TEXT,
                 note TEXT,
                 updated_by INTEGER,
-                updated_at TEXT
+                updated_at TEXT,
+                low_stock INTEGER DEFAULT 0
             )
         ''')
         cur.execute('''
@@ -138,7 +139,8 @@ def init_db():
                 quantity TEXT,
                 note TEXT,
                 updated_by INTEGER,
-                updated_at TEXT
+                updated_at TEXT,
+                low_stock INTEGER DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS essentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,6 +149,16 @@ def init_db():
             );
         ''')
         cur = db.cursor()
+
+    # マイグレーション: low_stockカラムがなければ追加
+    try:
+        if USE_PG:
+            cur.execute("ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0")
+        else:
+            cur.execute("ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0")
+        db.commit()
+    except Exception:
+        pass  # すでに存在する場合は無視
 
     # 初期データ
     cur.execute('SELECT COUNT(*) FROM users')
@@ -218,7 +230,9 @@ def index():
         cur = execute(db, 'SELECT COUNT(*) FROM items WHERE storage_id=?', (s['id'],))
         count = cur.fetchone()[0]
         shortage = get_shortage_count(db, s['id'])
-        storage_info.append({'storage': s, 'count': count, 'shortage': shortage})
+        cur = execute(db, 'SELECT COUNT(*) FROM items WHERE storage_id=? AND low_stock=1', (s['id'],))
+        low_stock_count = cur.fetchone()[0]
+        storage_info.append({'storage': s, 'count': count, 'shortage': shortage, 'low_stock': low_stock_count})
     return render_template('index.html', storage_info=storage_info)
 
 
@@ -281,6 +295,19 @@ def delete_item(item_id):
     execute(db, 'DELETE FROM items WHERE id=?', (item_id,))
     commit(db)
     return redirect(url_for('storage', storage_id=storage_id))
+
+
+@app.route('/item/<int:item_id>/low_stock', methods=['POST'])
+@login_required
+def toggle_low_stock(item_id):
+    db = get_db()
+    cur = execute(db, 'SELECT low_stock, storage_id FROM items WHERE id=?', (item_id,))
+    item = fetchone(cur)
+    if item:
+        new_val = 0 if item['low_stock'] else 1
+        execute(db, 'UPDATE items SET low_stock=? WHERE id=?', (new_val, item_id))
+        commit(db)
+    return redirect(url_for('storage', storage_id=item['storage_id']))
 
 
 @app.route('/item/<int:item_id>/edit', methods=['POST'])
@@ -395,13 +422,24 @@ def shopping():
     cur = execute(db, 'SELECT * FROM storages')
     storages = fetchall(cur)
     shopping_list = []
+    added = set()
     for s in storages:
         cur = execute(db, 'SELECT name FROM essentials WHERE storage_id=?', (s['id'],))
         essentials_list = fetchall(cur)
         for e in essentials_list:
             cur2 = execute(db, 'SELECT id FROM items WHERE storage_id=? AND name=?', (s['id'], e['name']))
             if not fetchone(cur2):
-                shopping_list.append({'storage': s['name'], 'name': e['name']})
+                key = (s['name'], e['name'])
+                if key not in added:
+                    shopping_list.append({'storage': s['name'], 'name': e['name'], 'reason': 'missing'})
+                    added.add(key)
+        cur = execute(db, 'SELECT name FROM items WHERE storage_id=? AND low_stock=1', (s['id'],))
+        low_items = fetchall(cur)
+        for item in low_items:
+            key = (s['name'], item['name'])
+            if key not in added:
+                shopping_list.append({'storage': s['name'], 'name': item['name'], 'reason': 'low'})
+                added.add(key)
     return render_template('shopping.html', shopping_list=shopping_list)
 
 

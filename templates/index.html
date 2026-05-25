@@ -16,7 +16,11 @@
       <div class="text-end">
         {% if info.shortage > 0 %}
         <span class="badge bg-danger shortage-badge">不足 {{ info.shortage }}品目</span>
-        {% else %}
+        {% endif %}
+        {% if info.low_stock > 0 %}
+        <span class="badge bg-warning text-dark shortage-badge">残り少 {{ info.low_stock }}品目</span>
+        {% endif %}
+        {% if info.shortage == 0 and info.low_stock == 0 %}
         <span class="badge bg-success shortage-badge">在庫OK</span>
         {% endif %}
         <i class="bi bi-chevron-right ms-2 text-muted"></i>

@@ -13,6 +13,11 @@
     <div>
       <strong>{{ item.name }}</strong>
       <span class="badge bg-secondary ms-2" style="font-size:0.7rem;">{{ item.storage }}</span>
+      {% if item.reason == 'low' %}
+      <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">残り少</span>
+      {% else %}
+      <span class="badge bg-danger ms-1" style="font-size:0.7rem;">在庫なし</span>
+      {% endif %}
     </div>
     <i class="bi bi-circle text-muted"></i>
   </div>

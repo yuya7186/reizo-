@@ -53,9 +53,12 @@
   <div class="list-group-item item-row p-2">
     <div class="d-flex align-items-center gap-2">
       <div class="flex-grow-1">
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
           {% if item.name in essential_names %}
           <span class="badge bg-primary" style="font-size:0.65rem;">必需品</span>
+          {% endif %}
+          {% if item.low_stock %}
+          <span class="badge bg-warning text-dark" style="font-size:0.65rem;">⚠️ 残り少</span>
           {% endif %}
           <strong>{{ item.name }}</strong>
           {% if item.quantity %}<span class="text-muted small">{{ item.quantity }}</span>{% endif %}
@@ -63,6 +66,11 @@
         {% if item.note %}<div class="text-muted small">{{ item.note }}</div>{% endif %}
         <div class="text-muted" style="font-size:0.7rem;">{{ item.updater or '' }} {{ item.updated_at or '' }}</div>
       </div>
+      <form method="post" action="/item/{{ item.id }}/low_stock">
+        <button type="submit" class="btn btn-sm {% if item.low_stock %}btn-warning{% else %}btn-outline-warning{% endif %}" title="残り少ない">
+          ⚠️
+        </button>
+      </form>
       <button class="btn btn-sm btn-outline-secondary" onclick="toggleEdit({{ item.id }})">
         <i class="bi bi-pencil"></i>
       </button>
