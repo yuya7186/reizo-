@@ -1,7 +1,9 @@
 import os
 import hashlib
 import base64
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+JST = timezone(timedelta(hours=9))
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, g
 import anthropic
@@ -296,7 +298,7 @@ def add_item(storage_id):
     if name:
         db = get_db()
         execute(db, 'INSERT INTO items (storage_id, name, quantity, note, updated_by, updated_at) VALUES (?,?,?,?,?,?)',
-                (storage_id, name, quantity, note, session['user_id'], datetime.now().strftime('%Y-%m-%d %H:%M')))
+                (storage_id, name, quantity, note, session['user_id'], datetime.now(JST).strftime('%Y-%m-%d %H:%M')))
         commit(db)
     return redirect(url_for('storage', storage_id=storage_id))
 
@@ -334,7 +336,7 @@ def edit_item(item_id):
     quantity = request.form.get('quantity', '').strip()
     note = request.form.get('note', '').strip()
     execute(db, 'UPDATE items SET name=?, quantity=?, note=?, updated_by=?, updated_at=? WHERE id=?',
-            (name, quantity, note, session['user_id'], datetime.now().strftime('%Y-%m-%d %H:%M'), item_id))
+            (name, quantity, note, session['user_id'], datetime.now(JST).strftime('%Y-%m-%d %H:%M'), item_id))
     commit(db)
     cur = execute(db, 'SELECT storage_id FROM items WHERE id=?', (item_id,))
     item = fetchone(cur)
@@ -391,7 +393,7 @@ def scan(storage_id):
 def scan_save(storage_id):
     db = get_db()
     items = request.form.getlist('items')
-    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    now = datetime.now(JST).strftime('%Y-%m-%d %H:%M')
     for name in items:
         name = name.strip()
         if name:
