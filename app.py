@@ -379,6 +379,8 @@ def scan(storage_id):
                 text = msg.content[0].text
                 recognized = [line.strip() for line in text.strip().splitlines() if line.strip()]
             except Exception as e:
+                import traceback
+                print(traceback.format_exc())
                 error = f'認識エラー: {e}'
 
     return render_template('scan.html', storage=s, recognized=recognized, error=error)
