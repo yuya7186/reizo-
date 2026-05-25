@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}管理画面{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  <a href="/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h5 class="mb-0">⚙️ 管理画面</h5>
+</div>
+
+<!-- スタッフ管理 -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-primary text-white py-2">
+    <i class="bi bi-people-fill me-1"></i>スタッフ管理
+  </div>
+  <div class="card-body p-0">
+    <div class="list-group list-group-flush">
+      {% for user in users %}
+      <div class="list-group-item py-2 px-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <strong>{{ user.display_name }}</strong>
+            <span class="text-muted small ms-2">{{ user.username }}</span>
+            {% if user.role == 'admin' %}
+            <span class="badge bg-danger ms-1" style="font-size:0.65rem;">管理者</span>
+            {% else %}
+            <span class="badge bg-secondary ms-1" style="font-size:0.65rem;">スタッフ</span>
+            {% endif %}
+          </div>
+          <div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-secondary" onclick="togglePwForm({{ user.id }})">
+              <i class="bi bi-key"></i>
+            </button>
+            {% if user.id != session.user_id %}
+            <form method="post" action="/admin/user/{{ user.id }}/delete"
+                  onsubmit="return confirm('{{ user.display_name }}を削除しますか？')">
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        <div id="pw-{{ user.id }}" class="mt-2 d-none">
+          <form method="post" action="/admin/user/{{ user.id }}/password" class="d-flex gap-1">
+            <input type="text" name="password" class="form-control form-control-sm" placeholder="新しいパスワード" required>
+            <button type="submit" class="btn btn-sm btn-success">変更</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- スタッフ追加 -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header py-2"><i class="bi bi-person-plus me-1"></i>スタッフを追加</div>
+  <div class="card-body p-3">
+    <form method="post" action="/admin/user/add">
+      <div class="row g-2">
+        <div class="col-6">
+          <input type="text" name="display_name" class="form-control form-control-sm" placeholder="表示名（例：田中）" required>
+        </div>
+        <div class="col-6">
+          <input type="text" name="username" class="form-control form-control-sm" placeholder="ログインID（例：tanaka）" required>
+        </div>
+        <div class="col-6">
+          <input type="text" name="password" class="form-control form-control-sm" placeholder="パスワード" required>
+        </div>
+        <div class="col-6">
+          <select name="role" class="form-select form-select-sm">
+            <option value="staff">スタッフ</option>
+            <option value="admin">管理者</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-sm w-100">追加</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 保管場所管理 -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-secondary text-white py-2">
+    <i class="bi bi-box-seam me-1"></i>保管場所管理
+  </div>
+  <div class="card-body p-0">
+    <div class="list-group list-group-flush">
+      {% for s in storages %}
+      <div class="list-group-item d-flex align-items-center justify-content-between py-2 px-3">
+        <span>{% if s.type == 'fridge' %}🧊{% else %}📦{% endif %} {{ s.name }}</span>
+        <form method="post" action="/admin/storage/{{ s.id }}/delete"
+              onsubmit="return confirm('{{ s.name }}を削除しますか？（在庫データも消えます）')">
+          <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- 保管場所追加 -->
+<div class="card shadow-sm">
+  <div class="card-header py-2"><i class="bi bi-plus-circle me-1"></i>保管場所を追加</div>
+  <div class="card-body p-3">
+    <form method="post" action="/admin/storage/add">
+      <div class="row g-2">
+        <div class="col-6">
+          <input type="text" name="name" class="form-control form-control-sm" placeholder="名前（例：冷蔵庫④）" required>
+        </div>
+        <div class="col-6">
+          <select name="type" class="form-select form-select-sm">
+            <option value="fridge">冷蔵庫🧊</option>
+            <option value="pantry">食材庫📦</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-secondary btn-sm w-100">追加</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePwForm(id) {
+  const el = document.getElementById('pw-' + id);
+  el.classList.toggle('d-none');
+}
+</script>
+{% endblock %}

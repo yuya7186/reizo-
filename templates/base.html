@@ -30,6 +30,9 @@
       <a class="navbar-brand" href="/"><i class="bi bi-box-seam me-1"></i>在庫管理</a>
       <div class="d-flex align-items-center gap-2">
         <a href="/shopping" class="btn btn-sm btn-warning"><i class="bi bi-cart3"></i></a>
+        {% if session.get('role') == 'admin' %}
+        <a href="/admin" class="btn btn-sm btn-light"><i class="bi bi-gear"></i></a>
+        {% endif %}
         <span class="text-white small hide-sm">{{ session.get('display_name','') }}</span>
         <a href="/logout" class="btn btn-sm btn-outline-light">ログアウト</a>
       </div>

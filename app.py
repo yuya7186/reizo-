@@ -86,7 +86,8 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
-                display_name TEXT NOT NULL
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'staff'
             )
         ''')
         cur.execute('''
@@ -125,7 +126,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
-                display_name TEXT NOT NULL
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'staff'
             );
             CREATE TABLE IF NOT EXISTS storages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,24 +152,26 @@ def init_db():
         ''')
         cur = db.cursor()
 
-    # マイグレーション: low_stockカラムがなければ追加
-    try:
-        if USE_PG:
-            cur.execute("ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0")
-        else:
-            cur.execute("ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0")
-        db.commit()
-    except Exception:
-        pass  # すでに存在する場合は無視
+    # マイグレーション: カラムがなければ追加
+    for migration in [
+        "ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'staff'",
+    ]:
+        try:
+            cur.execute(migration)
+            db.commit()
+        except Exception:
+            pass  # すでに存在する場合は無視
 
     # 初期データ
     cur.execute('SELECT COUNT(*) FROM users')
     if cur.fetchone()[0] == 0:
         def h(pw): return hashlib.sha256(pw.encode()).hexdigest()
-        for row in [('staff1', h('pass1234'), '職員1'),
-                    ('staff2', h('pass1234'), '職員2'),
-                    ('staff3', h('pass1234'), '職員3')]:
-            cur.execute(q('INSERT INTO users (username, password, display_name) VALUES (?,?,?)'), row)
+        for row in [('admin', h('admin1234'), '管理者', 'admin'),
+                    ('staff1', h('pass1234'), '職員1', 'staff'),
+                    ('staff2', h('pass1234'), '職員2', 'staff'),
+                    ('staff3', h('pass1234'), '職員3', 'staff')]:
+            cur.execute(q('INSERT INTO users (username, password, display_name, role) VALUES (?,?,?,?)'), row)
 
     cur.execute('SELECT COUNT(*) FROM storages')
     if cur.fetchone()[0] == 0:
@@ -184,6 +188,17 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
 
@@ -206,6 +221,7 @@ def login():
         if user:
             session['user_id'] = user['id']
             session['display_name'] = user['display_name']
+            session['role'] = user['role']
             return redirect(url_for('index'))
         error = 'IDまたはパスワードが違います'
     return render_template('login.html', error=error)
@@ -441,6 +457,81 @@ def shopping():
                 shopping_list.append({'storage': s['name'], 'name': item['name'], 'reason': 'low'})
                 added.add(key)
     return render_template('shopping.html', shopping_list=shopping_list)
+
+
+# ─── 管理画面 ─────────────────────────────────────────────
+
+@app.route('/admin')
+@admin_required
+def admin():
+    db = get_db()
+    cur = execute(db, "SELECT id, username, display_name, role FROM users ORDER BY role, username")
+    users = fetchall(cur)
+    cur = execute(db, 'SELECT * FROM storages ORDER BY id')
+    storages = fetchall(cur)
+    return render_template('admin.html', users=users, storages=storages)
+
+
+@app.route('/admin/user/add', methods=['POST'])
+@admin_required
+def admin_add_user():
+    username = request.form['username'].strip()
+    display_name = request.form['display_name'].strip()
+    password = request.form['password'].strip()
+    role = request.form.get('role', 'staff')
+    if username and password:
+        db = get_db()
+        try:
+            execute(db, 'INSERT INTO users (username, password, display_name, role) VALUES (?,?,?,?)',
+                    (username, hash_password(password), display_name or username, role))
+            commit(db)
+        except Exception:
+            pass  # 重複ユーザー名は無視
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    if user_id != session['user_id']:  # 自分自身は削除不可
+        db = get_db()
+        execute(db, 'DELETE FROM users WHERE id=?', (user_id,))
+        commit(db)
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/password', methods=['POST'])
+@admin_required
+def admin_change_password(user_id):
+    password = request.form['password'].strip()
+    if password:
+        db = get_db()
+        execute(db, 'UPDATE users SET password=? WHERE id=?', (hash_password(password), user_id))
+        commit(db)
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/storage/add', methods=['POST'])
+@admin_required
+def admin_add_storage():
+    name = request.form['name'].strip()
+    stype = request.form.get('type', 'fridge')
+    if name:
+        db = get_db()
+        execute(db, 'INSERT INTO storages (name, type) VALUES (?,?)', (name, stype))
+        commit(db)
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/storage/<int:storage_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_storage(storage_id):
+    db = get_db()
+    execute(db, 'DELETE FROM items WHERE storage_id=?', (storage_id,))
+    execute(db, 'DELETE FROM essentials WHERE storage_id=?', (storage_id,))
+    execute(db, 'DELETE FROM storages WHERE id=?', (storage_id,))
+    commit(db)
+    return redirect(url_for('admin'))
 
 
 # アプリ起動時に必ずDB初期化
