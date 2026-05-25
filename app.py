@@ -405,6 +405,12 @@ def shopping():
     return render_template('shopping.html', shopping_list=shopping_list)
 
 
+# アプリ起動時に必ずDB初期化
+with app.app_context():
+    try:
+        init_db()
+    except Exception as e:
+        print(f'init_db error: {e}')
+
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5002)
