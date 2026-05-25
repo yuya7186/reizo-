@@ -1,0 +1,4 @@
+flask
+anthropic
+psycopg2-binary
+gunicorn

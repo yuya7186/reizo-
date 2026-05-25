@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}必需品リスト - {{ storage.name }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  <a href="/storage/{{ storage.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h5 class="mb-0">📋 必需品リスト - {{ storage.name }}</h5>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body p-3">
+    <form method="post">
+      <div class="input-group">
+        <input type="text" name="name" class="form-control" placeholder="品名を入力" required>
+        <button type="submit" class="btn btn-primary">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if essentials %}
+<div class="list-group shadow-sm">
+  {% for e in essentials %}
+  <div class="list-group-item d-flex align-items-center justify-content-between py-2">
+    <span>{{ e.name }}</span>
+    <form method="post" action="/essential/{{ e.id }}/delete" onsubmit="return confirm('削除しますか？')">
+      <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-4">
+  <i class="bi bi-list-check" style="font-size:2rem;"></i>
+  <p class="mt-2 small">必需品が登録されていません</p>
+</div>
+{% endif %}
+{% endblock %}
