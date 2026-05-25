@@ -14,24 +14,39 @@
 <div class="card shadow-sm mb-3">
   <div class="card-body">
     <p class="text-muted small mb-3">冷蔵庫・食材庫の中を撮影してください。AIが品目を自動認識します。</p>
-    <form method="post" enctype="multipart/form-data">
+
+    <form method="post" enctype="multipart/form-data" id="scanForm">
+      <!-- 写真選択ボタン -->
       <div class="mb-3">
-        <input type="file" name="photo" accept="image/*" capture="environment"
-               class="form-control form-control-lg" required id="photoInput">
+        <label class="btn btn-outline-primary w-100 py-3" for="photoInput">
+          <i class="bi bi-camera me-2" style="font-size:1.3rem;"></i>写真を選ぶ / 撮影する
+        </label>
+        <input type="file" name="photo" accept="image/*"
+               class="d-none" id="photoInput">
       </div>
-      <div id="preview" class="mb-3 d-none">
-        <img id="previewImg" class="img-fluid rounded" style="max-height:300px;">
+
+      <!-- プレビュー -->
+      <div id="preview" class="mb-3 d-none text-center">
+        <img id="previewImg" class="img-fluid rounded" style="max-height:250px;">
+        <p class="text-success small mt-1 mb-0"><i class="bi bi-check-circle"></i> 写真を選択しました</p>
       </div>
-      <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn" onclick="showLoading()">
-        <i class="bi bi-stars me-2"></i>AIで認識する
-      </button>
+
+      <!-- 送信ボタン（写真選択後に表示） -->
+      <div id="submitArea" class="d-none">
+        <button type="submit" class="btn btn-success btn-lg w-100" id="submitBtn">
+          <i class="bi bi-stars me-2"></i>AIで認識する
+        </button>
+      </div>
+
+      <!-- ローディング -->
+      <div id="loading" class="d-none text-center mt-3">
+        <div class="spinner-border text-success" role="status"></div>
+        <p class="mt-2 text-muted">AIが画像を解析中…<br><small>10〜30秒かかる場合があります</small></p>
+      </div>
     </form>
-    <div id="loading" class="d-none text-center mt-3">
-      <div class="spinner-border text-success" role="status"></div>
-      <p class="mt-2 text-muted small">AIが画像を解析中です…<br>10〜20秒かかる場合があります</p>
-    </div>
   </div>
 </div>
+
 {% else %}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
@@ -65,21 +80,24 @@
 
 {% block scripts %}
 <script>
-function showLoading() {
-  document.getElementById('submitBtn').classList.add('d-none');
-  document.getElementById('loading').classList.remove('d-none');
-}
-
 document.getElementById('photoInput')?.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (file) {
+    // プレビュー表示
     const reader = new FileReader();
     reader.onload = function(ev) {
       document.getElementById('previewImg').src = ev.target.result;
       document.getElementById('preview').classList.remove('d-none');
     };
     reader.readAsDataURL(file);
+    // 送信ボタンを表示
+    document.getElementById('submitArea').classList.remove('d-none');
   }
+});
+
+document.getElementById('scanForm')?.addEventListener('submit', function() {
+  document.getElementById('submitBtn').classList.add('d-none');
+  document.getElementById('loading').classList.remove('d-none');
 });
 
 function addExtra() {
