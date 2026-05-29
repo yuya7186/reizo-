@@ -413,6 +413,58 @@ def scan_save(storage_id):
     return redirect(url_for('storage', storage_id=storage_id))
 
 
+# ─── レシート認識 ─────────────────────────────────────────────
+
+@app.route('/storage/<int:storage_id>/receipt', methods=['GET', 'POST'])
+@login_required
+def receipt(storage_id):
+    db = get_db()
+    cur = execute(db, 'SELECT * FROM storages WHERE id=?', (storage_id,))
+    s = fetchone(cur)
+    recognized = None
+    error = None
+
+    if request.method == 'POST':
+        file = request.files.get('photo')
+        if file and file.filename:
+            img_bytes = file.read()
+            img_b64 = base64.standard_b64encode(img_bytes).decode()
+            media_type = file.content_type or 'image/jpeg'
+            try:
+                api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+                client = anthropic.Anthropic(api_key=api_key if api_key else None)
+                prompt = (
+                    'これは買い物レシートの写真です。\n'
+                    'レシートに記載されている食品・飲料・食材・調味料の品名を日本語でリストアップしてください。\n\n'
+                    '【ルール】\n'
+                    '- 1行に1品目のみ\n'
+                    '- 品名だけ（価格・数量・記号は不要）\n'
+                    '- レシートに書かれた商品名をそのまま読み取る\n'
+                    '- 食品・飲料・食材・調味料以外（日用品・袋代など）は除外する\n'
+                    '- 前置きや説明文は一切書かず、品名リストだけ出力する\n\n'
+                    '出力例:\n牛乳\n食パン\n卵\nキャベツ\n醤油'
+                )
+                msg = client.messages.create(
+                    model='claude-3-5-sonnet-20241022',
+                    max_tokens=1024,
+                    messages=[{
+                        'role': 'user',
+                        'content': [
+                            {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type, 'data': img_b64}},
+                            {'type': 'text', 'text': prompt}
+                        ]
+                    }]
+                )
+                text = msg.content[0].text
+                recognized = [line.strip() for line in text.strip().splitlines() if line.strip()]
+            except Exception as e:
+                import traceback
+                print(traceback.format_exc())
+                error = f'認識エラー: {e}'
+
+    return render_template('receipt.html', storage=s, recognized=recognized, error=error)
+
+
 # ─── 必需品リスト ──────────────────────────────────────────
 
 @app.route('/storage/<int:storage_id>/essentials', methods=['GET', 'POST'])
