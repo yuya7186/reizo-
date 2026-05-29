@@ -51,7 +51,7 @@
 <div class="list-group shadow-sm">
   {% for item in items %}
   <div class="list-group-item item-row p-2">
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-1">
       <div class="flex-grow-1">
         <div class="d-flex align-items-center gap-2 flex-wrap">
           {% if item.name in essential_names %}
@@ -61,22 +61,38 @@
           <span class="badge bg-warning text-dark" style="font-size:0.65rem;">⚠️ 残り少</span>
           {% endif %}
           <strong>{{ item.name }}</strong>
-          {% if item.quantity %}<span class="text-muted small">{{ item.quantity }}</span>{% endif %}
         </div>
         {% if item.note %}<div class="text-muted small">{{ item.note }}</div>{% endif %}
         <div class="text-muted" style="font-size:0.7rem;">{{ item.updater or '' }} {{ item.updated_at or '' }}</div>
       </div>
-      <form method="post" action="/item/{{ item.id }}/low_stock">
-        <button type="submit" class="btn btn-sm {% if item.low_stock %}btn-warning{% else %}btn-outline-warning{% endif %}" title="残り少ない">
-          ⚠️
-        </button>
+
+      <!-- 数字の場合：－ 数量 ＋ ボタン -->
+      {% if item.quantity and item.quantity.isdigit() %}
+      <form method="post" action="/item/{{ item.id }}/decrement">
+        <button type="submit" class="btn btn-sm btn-outline-secondary px-2">－</button>
       </form>
-      <button class="btn btn-sm btn-outline-secondary" onclick="toggleEdit({{ item.id }})">
+      <span class="fw-bold" style="min-width:2rem;text-align:center;">{{ item.quantity }}</span>
+      <form method="post" action="/item/{{ item.id }}/increment">
+        <button type="submit" class="btn btn-sm btn-outline-secondary px-2">＋</button>
+      </form>
+      {% else %}
+      {% if item.quantity %}
+      <span class="text-muted small me-1">{{ item.quantity }}</span>
+      {% endif %}
+      {% endif %}
+
+      <!-- 使い切りボタン -->
+      <form method="post" action="/item/{{ item.id }}/delete">
+        <button type="submit" class="btn btn-sm btn-success px-2" title="使い切り">✅</button>
+      </form>
+
+      <!-- 編集・⚠️ -->
+      <form method="post" action="/item/{{ item.id }}/low_stock">
+        <button type="submit" class="btn btn-sm {% if item.low_stock %}btn-warning{% else %}btn-outline-warning{% endif %} px-2">⚠️</button>
+      </form>
+      <button class="btn btn-sm btn-outline-secondary px-2" onclick="toggleEdit({{ item.id }})">
         <i class="bi bi-pencil"></i>
       </button>
-      <form method="post" action="/item/{{ item.id }}/delete" onsubmit="return confirm('削除しますか？')">
-        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-      </form>
     </div>
     <!-- 編集フォーム -->
     <div id="edit-{{ item.id }}" class="mt-2 d-none">

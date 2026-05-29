@@ -315,6 +315,43 @@ def delete_item(item_id):
     return redirect(url_for('storage', storage_id=storage_id))
 
 
+@app.route('/item/<int:item_id>/increment', methods=['POST'])
+@login_required
+def increment_item(item_id):
+    db = get_db()
+    cur = execute(db, 'SELECT * FROM items WHERE id=?', (item_id,))
+    item = fetchone(cur)
+    if item:
+        try:
+            new_qty = int(item['quantity']) + 1
+            execute(db, 'UPDATE items SET quantity=?, updated_by=?, updated_at=? WHERE id=?',
+                    (str(new_qty), session['user_id'], datetime.now(JST).strftime('%Y-%m-%d %H:%M'), item_id))
+            commit(db)
+        except (ValueError, TypeError):
+            pass
+    return redirect(url_for('storage', storage_id=item['storage_id']))
+
+
+@app.route('/item/<int:item_id>/decrement', methods=['POST'])
+@login_required
+def decrement_item(item_id):
+    db = get_db()
+    cur = execute(db, 'SELECT * FROM items WHERE id=?', (item_id,))
+    item = fetchone(cur)
+    if item:
+        try:
+            new_qty = int(item['quantity']) - 1
+            if new_qty <= 0:
+                execute(db, 'DELETE FROM items WHERE id=?', (item_id,))
+            else:
+                execute(db, 'UPDATE items SET quantity=?, updated_by=?, updated_at=? WHERE id=?',
+                        (str(new_qty), session['user_id'], datetime.now(JST).strftime('%Y-%m-%d %H:%M'), item_id))
+            commit(db)
+        except (ValueError, TypeError):
+            pass
+    return redirect(url_for('storage', storage_id=item['storage_id']))
+
+
 @app.route('/item/<int:item_id>/low_stock', methods=['POST'])
 @login_required
 def toggle_low_stock(item_id):
