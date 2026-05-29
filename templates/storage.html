@@ -7,10 +7,7 @@
     {% if storage.type == 'fridge' %}🧊{% else %}📦{% endif %}
     {{ storage.name }}
   </h5>
-  <a href="/storage/{{ storage.id }}/scan" class="btn btn-sm btn-success ms-auto">
-    <i class="bi bi-camera"></i> 写真
-  </a>
-  <a href="/storage/{{ storage.id }}/receipt" class="btn btn-sm btn-outline-success">
+  <a href="/storage/{{ storage.id }}/receipt" class="btn btn-sm btn-outline-success ms-auto">
     🧾 レシート
   </a>
   <a href="/storage/{{ storage.id }}/essentials" class="btn btn-sm btn-outline-primary">
