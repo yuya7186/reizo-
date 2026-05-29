@@ -15,7 +15,7 @@
   <div class="card-body">
     <p class="text-muted small mb-3">
       買い物レシートを撮影してください。<br>
-      AIが食品・食材の品名を自動で読み取ります。
+      AIが食品の品名と個数を自動で読み取ります。
     </p>
 
     <form method="post" enctype="multipart/form-data" id="receiptForm">
@@ -23,8 +23,7 @@
         <label class="btn btn-outline-success w-100 py-3" for="photoInput">
           <i class="bi bi-receipt me-2" style="font-size:1.3rem;"></i>レシートを撮影 / 選ぶ
         </label>
-        <input type="file" name="photo" accept="image/*"
-               class="d-none" id="photoInput">
+        <input type="file" name="photo" accept="image/*" class="d-none" id="photoInput">
       </div>
 
       <div id="preview" class="mb-3 d-none text-center">
@@ -58,26 +57,39 @@
 {% else %}
 <div class="card shadow-sm mb-3">
   <div class="card-body">
-    <h6 class="mb-3">✅ 読み取り結果を確認してください</h6>
-    <p class="text-muted small">チェックを外すと登録されません</p>
-    <form method="post" action="/storage/{{ storage.id }}/scan/save">
-      {% for item in recognized %}
-      <div class="form-check mb-2">
-        <input class="form-check-input" type="checkbox" name="items" value="{{ item }}" id="item{{ loop.index }}" checked>
-        <label class="form-check-label" for="item{{ loop.index }}">{{ item }}</label>
+    <h6 class="mb-2">✅ 読み取り結果を確認してください</h6>
+    <p class="text-muted small mb-3">不要な行は削除ボタンで消せます。品名・個数も修正できます。</p>
+
+    <form method="post" action="/storage/{{ storage.id }}/receipt/save" id="saveForm">
+      <div class="mb-1 row g-1 text-muted small px-1">
+        <div class="col-6">品名</div>
+        <div class="col-3">個数</div>
+        <div class="col-3"></div>
       </div>
-      {% endfor %}
+      <div id="item-list">
+        {% for item in recognized %}
+        <div class="row g-1 mb-1 item-row">
+          <div class="col-6">
+            <input type="text" name="name" class="form-control form-control-sm" value="{{ item.name }}" required>
+          </div>
+          <div class="col-3">
+            <input type="text" name="quantity" class="form-control form-control-sm" value="{{ item.quantity }}">
+          </div>
+          <div class="col-3">
+            <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest('.item-row').remove()">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="addRow()">
+        <i class="bi bi-plus"></i> 行を追加
+      </button>
 
       <hr>
-      <div class="mb-3">
-        <label class="form-label small text-muted">読み取れなかった品目を追加</label>
-        <div id="extra-items"></div>
-        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="addExtra()">
-          <i class="bi bi-plus"></i> 追加
-        </button>
-      </div>
-
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 mt-2">
         <a href="/storage/{{ storage.id }}/receipt" class="btn btn-outline-secondary flex-fill">撮り直す</a>
         <button type="submit" class="btn btn-primary flex-fill">在庫に登録する</button>
       </div>
@@ -107,12 +119,15 @@ document.getElementById('receiptForm')?.addEventListener('submit', function() {
   document.getElementById('loading').classList.remove('d-none');
 });
 
-function addExtra() {
+function addRow() {
   const div = document.createElement('div');
-  div.className = 'input-group mb-1';
-  div.innerHTML = '<input type="text" name="items" class="form-control form-control-sm" placeholder="品名">'
-                + '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentNode.remove()"><i class="bi bi-x"></i></button>';
-  document.getElementById('extra-items').appendChild(div);
+  div.className = 'row g-1 mb-1 item-row';
+  div.innerHTML = `
+    <div class="col-6"><input type="text" name="name" class="form-control form-control-sm" placeholder="品名" required></div>
+    <div class="col-3"><input type="text" name="quantity" class="form-control form-control-sm" placeholder="個数"></div>
+    <div class="col-3"><button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest('.item-row').remove()"><i class="bi bi-trash"></i></button></div>
+  `;
+  document.getElementById('item-list').appendChild(div);
 }
 </script>
 {% endblock %}

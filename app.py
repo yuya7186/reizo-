@@ -435,14 +435,17 @@ def receipt(storage_id):
                 client = anthropic.Anthropic(api_key=api_key if api_key else None)
                 prompt = (
                     'これは買い物レシートの写真です。\n'
-                    'レシートに記載されている食品・飲料・食材・調味料の品名を日本語でリストアップしてください。\n\n'
+                    'レシートに記載されている食品・飲料・食材・調味料の品名と個数を読み取ってください。\n\n'
+                    '【出力フォーマット】\n'
+                    '品名,個数\n'
+                    '（1行に1品目、カンマ区切り）\n\n'
                     '【ルール】\n'
-                    '- 1行に1品目のみ\n'
-                    '- 品名だけ（価格・数量・記号は不要）\n'
-                    '- レシートに書かれた商品名をそのまま読み取る\n'
-                    '- 食品・飲料・食材・調味料以外（日用品・袋代など）は除外する\n'
-                    '- 前置きや説明文は一切書かず、品名リストだけ出力する\n\n'
-                    '出力例:\n牛乳\n食パン\n卵\nキャベツ\n醤油'
+                    '- 品名はレシートの商品名をそのまま読み取る\n'
+                    '- 個数はレシートに記載の数量（例: 1、2、3）\n'
+                    '- 個数が読み取れない場合は 1 とする\n'
+                    '- 食品・飲料・食材・調味料以外（日用品・袋代・ポイントなど）は除外する\n'
+                    '- 前置きや説明文は一切書かず、リストだけ出力する\n\n'
+                    '出力例:\n牛乳,2\n食パン,1\n卵,1\nキャベツ,1\n醤油,1'
                 )
                 msg = client.messages.create(
                     model='claude-3-5-sonnet-20241022',
@@ -456,13 +459,42 @@ def receipt(storage_id):
                     }]
                 )
                 text = msg.content[0].text
-                recognized = [line.strip() for line in text.strip().splitlines() if line.strip()]
+                recognized = []
+                for line in text.strip().splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if ',' in line:
+                        parts = line.split(',', 1)
+                        name = parts[0].strip()
+                        qty = parts[1].strip()
+                    else:
+                        name = line
+                        qty = '1'
+                    if name:
+                        recognized.append({'name': name, 'quantity': qty})
             except Exception as e:
                 import traceback
                 print(traceback.format_exc())
                 error = f'認識エラー: {e}'
 
     return render_template('receipt.html', storage=s, recognized=recognized, error=error)
+
+
+@app.route('/storage/<int:storage_id>/receipt/save', methods=['POST'])
+@login_required
+def receipt_save(storage_id):
+    db = get_db()
+    names = request.form.getlist('name')
+    quantities = request.form.getlist('quantity')
+    now = datetime.now(JST).strftime('%Y-%m-%d %H:%M')
+    for name, qty in zip(names, quantities):
+        name = name.strip()
+        if name:
+            execute(db, 'INSERT INTO items (storage_id, name, quantity, note, updated_by, updated_at) VALUES (?,?,?,?,?,?)',
+                    (storage_id, name, qty.strip(), '', session['user_id'], now))
+    commit(db)
+    return redirect(url_for('storage', storage_id=storage_id))
 
 
 # ─── 必需品リスト ──────────────────────────────────────────
