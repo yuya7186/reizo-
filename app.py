@@ -154,6 +154,15 @@ def init_db():
         ''')
         cur = db.cursor()
 
+    # 職員名マイグレーション
+    try:
+        cur.execute(q("UPDATE users SET display_name='村上' WHERE username='staff1' AND display_name='職員1'"))
+        cur.execute(q("UPDATE users SET display_name='金子' WHERE username='staff2' AND display_name='職員2'"))
+        cur.execute(q("UPDATE users SET display_name='大石' WHERE username='staff3' AND display_name='職員3'"))
+        db.commit()
+    except Exception:
+        pass
+
     # マイグレーション: カラムがなければ追加
     for migration in [
         "ALTER TABLE items ADD COLUMN low_stock INTEGER DEFAULT 0",
@@ -170,9 +179,9 @@ def init_db():
     if cur.fetchone()[0] == 0:
         def h(pw): return hashlib.sha256(pw.encode()).hexdigest()
         for row in [('admin', h('admin1234'), '管理者', 'admin'),
-                    ('staff1', h('pass1234'), '職員1', 'staff'),
-                    ('staff2', h('pass1234'), '職員2', 'staff'),
-                    ('staff3', h('pass1234'), '職員3', 'staff')]:
+                    ('staff1', h('pass1234'), '村上', 'staff'),
+                    ('staff2', h('pass1234'), '金子', 'staff'),
+                    ('staff3', h('pass1234'), '大石', 'staff')]:
             cur.execute(q('INSERT INTO users (username, password, display_name, role) VALUES (?,?,?,?)'), row)
 
     cur.execute('SELECT COUNT(*) FROM storages')
