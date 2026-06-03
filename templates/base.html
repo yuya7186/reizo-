@@ -33,7 +33,7 @@
         {% if session.get('role') == 'admin' %}
         <a href="/admin" class="btn btn-sm btn-light"><i class="bi bi-gear"></i></a>
         {% endif %}
-        <span class="text-white small hide-sm">{{ session.get('display_name','') }}</span>
+        <a href="/password" class="text-white small hide-sm text-decoration-none">{{ session.get('display_name','') }}</a>
         <a href="/logout" class="btn btn-sm btn-outline-light">ログアウト</a>
       </div>
     </div>

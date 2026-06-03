@@ -238,6 +238,31 @@ def login():
     return render_template('login.html', error=error)
 
 
+@app.route('/password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    message = None
+    error = None
+    if request.method == 'POST':
+        current = request.form['current'].strip()
+        new_pw = request.form['new_pw'].strip()
+        confirm = request.form['confirm'].strip()
+        db = get_db()
+        cur = execute(db, 'SELECT * FROM users WHERE id=?', (session['user_id'],))
+        user = fetchone(cur)
+        if user['password'] != hash_password(current):
+            error = '現在のパスワードが違います'
+        elif not new_pw:
+            error = '新しいパスワードを入力してください'
+        elif new_pw != confirm:
+            error = '新しいパスワードが一致しません'
+        else:
+            execute(db, 'UPDATE users SET password=? WHERE id=?', (hash_password(new_pw), session['user_id']))
+            commit(db)
+            message = 'パスワードを変更しました'
+    return render_template('password.html', message=message, error=error)
+
+
 @app.route('/logout')
 def logout():
     session.clear()
