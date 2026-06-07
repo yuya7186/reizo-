@@ -449,7 +449,7 @@ def receipt(storage_id):
                     '出力例:\n牛乳,2\n食パン,1\n卵,1\nキャベツ,1\n醤油,1'
                 )
                 msg = client.messages.create(
-                    model='claude-haiku-4-5-20251001',
+                    model='claude-sonnet-4-5',
                     max_tokens=1024,
                     messages=[{
                         'role': 'user',
